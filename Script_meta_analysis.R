@@ -3,12 +3,16 @@ library(preprocessCore)
 library(pheatmap)
 library(wCorr)
 library(MLmetrics)
+library(GSA)
+library(igraph)
 
 #General table contruction
 
 {
-
 list_files = list.files("Path/to/directory/Gene_expression_tables")
+
+setwd("Path/to/directory")
+Dataset_info=read.table("Dataset_information.txt", header=T, sep="\t")
 
 unique_gene=c()
 for (i in 1:length(list_files)){
@@ -27,9 +31,6 @@ for (i in 1:length(list_files)){
 
 rownames(all_data)=unique_gene
 colnames(all_data)=gsub(".txt","",list_files)
-
-
-Dataset_info=read.table("Path/to/directory/Dataset_information.txt", header=T, sep="\t")
 
 }
 
@@ -50,12 +51,20 @@ NA_per_column = colSums(is.na(all_data_select))
 Dataset_info=Dataset_info[NA_per_column<(dim(all_data_select)[1]/3),]
 Dataset_info=Dataset_info[Dataset_info$metal_type!="cobalt"&Dataset_info$metal_type!="nickel",]
 all_data_select = all_data_select[,as.character(Dataset_info[,1])]
+
+#all_data_select is Data_File_s1
 }
+
+#To work directly with Data File S1, do not apply previous section but start here and unmute the four following lines
+
+#setwd("Path/to/directory")
+#all_data_select=as.matrix(read.table("Data_File_S1.txt", sep="\t", header=T))
+#Dataset_info=read.table("Dataset_information.txt", header=T, sep="\t")
+#Dataset_info=Dataset_info[Dataset_info$Ref%in%colnames(all_data_select),]
 
 #Normalization
 
 {
-
 all_data_select_norm = normalize.quantiles(all_data_select)
 rownames(all_data_select_norm)=rownames(all_data_select)
 colnames(all_data_select_norm)=colnames(all_data_select)
@@ -72,8 +81,8 @@ Variable_genes = names(which(sqrt(Var_logFC)>0.38))
 PCA_all_data = PCA(t(all_data_select_norm[Variable_genes,]),scale.unit = T, graph = F)
 barplot(PCA_all_data$eig[,2])
 
-plot.PCA(PCA_all_data,choix = "ind", col.ind = rainbow(ncol(all_data_select)), cex=0.6)
-plot.PCA(PCA_all_data,choix = "ind", col.ind = rainbow(ncol(all_data_select)), axes=c(1,3), cex=0.6)
+plot.PCA(PCA_all_data,choix = "ind", cex=0.6)
+plot.PCA(PCA_all_data,choix = "ind", axes=c(1,3), cex=0.6)
 
 }
 
@@ -83,78 +92,78 @@ plot.PCA(PCA_all_data,choix = "ind", col.ind = rainbow(ncol(all_data_select)), a
 score_Pt = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="platinum",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Pt = rowMeans(score_Pt, na.rm = TRUE)
 score_Pt_ordered = score_Pt[order(as.numeric(score_Pt))]
-signature_platine = names(score_Pt_ordered[1:50])
+signature_Pt = names(score_Pt_ordered[1:50])
 
 score_Ti = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="titanium",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Ti = rowMeans(score_Ti, na.rm = TRUE)
 score_Ti_ordered = score_Ti[order(as.numeric(score_Ti))]
-signature_titane = names(score_Ti_ordered[1:50])
+signature_Ti = names(score_Ti_ordered[1:50])
 
 score_Fe_ion = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="iron"&Dataset_info$form=="ion",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Fe_ion = rowMeans(score_Fe_ion, na.rm = TRUE)
 score_Fe_ion_ordered = score_Fe_ion[order(as.numeric(score_Fe_ion))]
-signature_fer_ion = names(score_Fe_ion_ordered[1:50])
+signature_Fe_ion = names(score_Fe_ion_ordered[1:50])
 
 score_Fe_np = apply(as.data.frame(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="iron"&Dataset_info$form=="np",1])]),MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Fe_np = rowMeans(score_Fe_np, na.rm = TRUE)
 score_Fe_np_ordered = score_Fe_np[order(as.numeric(score_Fe_np))]
-signature_fer_np = names(score_Fe_np_ordered[1:50])
+signature_Fe_np = names(score_Fe_np_ordered[1:50])
 
 score_Au_ion = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="gold"&Dataset_info$form=="ion",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Au_ion = rowMeans(score_Au_ion, na.rm = TRUE)
 score_Au_ion_ordered = score_Au_ion[order(as.numeric(score_Au_ion))]
-signature_or_ion = names(score_Au_ion_ordered[1:50])
+signature_Au_ion = names(score_Au_ion_ordered[1:50])
 
 score_Au_np = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="gold"&Dataset_info$form=="np",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Au_np = rowMeans(score_Au_np, na.rm = TRUE)
 score_Au_np_ordered = score_Au_np[order(as.numeric(score_Au_np))]
-signature_or_np = names(score_Au_np_ordered[1:50])
+signature_Au_np = names(score_Au_np_ordered[1:50])
 
 score_Ag_ion = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="silver"&Dataset_info$form=="ion",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Ag_ion = rowMeans(score_Ag_ion, na.rm = TRUE)
 score_Ag_ion_ordered = score_Ag_ion[order(as.numeric(score_Ag_ion))]
-signature_argent_ion = names(score_Ag_ion_ordered[1:50])
+signature_Ag_ion = names(score_Ag_ion_ordered[1:50])
 
 score_Ag_np = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="silver"&Dataset_info$form=="np",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Ag_np = rowMeans(score_Ag_np, na.rm = TRUE)
 score_Ag_np_ordered = score_Ag_np[order(as.numeric(score_Ag_np))]
-signature_argent_np = names(score_Ag_np_ordered[1:50])
+signature_Ag_np = names(score_Ag_np_ordered[1:50])
 
 score_Cu_ion = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="copper"&Dataset_info$form=="ion",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Cu_ion = rowMeans(score_Cu_ion, na.rm = TRUE)
 score_Cu_ion_ordered = score_Cu_ion[order(as.numeric(score_Cu_ion))]
-signature_cuivre_ion = names(score_Cu_ion_ordered[1:50])
+signature_Cu_ion = names(score_Cu_ion_ordered[1:50])
 
 score_Cu_np = apply(as.data.frame(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="copper"&Dataset_info$form=="np",1])]),MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Cu_np = rowMeans(score_Cu_np, na.rm = TRUE)
 score_Cu_np_ordered = score_Cu_np[order(as.numeric(score_Cu_np))]
-signature_cuivre_np = names(score_Cu_np_ordered[1:50])
+signature_Cu_np = names(score_Cu_np_ordered[1:50])
 
 
 score_Zn_ion = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="zinc"&Dataset_info$form=="ion",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Zn_ion = rowMeans(score_Zn_ion, na.rm = TRUE)
 score_Zn_ion_ordered = score_Zn_ion[order(as.numeric(score_Zn_ion))]
-signature_zinc_ion = names(score_Zn_ion_ordered[1:50])
+signature_Zn_ion = names(score_Zn_ion_ordered[1:50])
 
 score_Zn_np = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="zinc"&Dataset_info$form=="np",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Zn_np = rowMeans(score_Zn_np, na.rm = TRUE)
 score_Zn_np_ordered = score_Zn_np[order(as.numeric(score_Zn_np))]
-signature_zinc_np = names(score_Zn_np_ordered[1:50])
+signature_Zn_np = names(score_Zn_np_ordered[1:50])
 
 score_Cd = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="cadmium",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Cd = rowMeans(score_Cd, na.rm = TRUE)
 score_Cd_ordered = score_Cd[order(as.numeric(score_Cd))]
-signature_cadmium = names(score_Cd_ordered[1:50])
+signature_Cd = names(score_Cd_ordered[1:50])
 
 score_C = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="carbon",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_C = rowMeans(score_C, na.rm = TRUE)
 score_C_ordered = score_C[order(as.numeric(score_C))]
-signature_carbone = names(score_C_ordered[1:50])
+signature_C = names(score_C_ordered[1:50])
 
 score_Si = apply(all_data_select_norm[,as.character(Dataset_info[Dataset_info$metal_type=="silica",1])],MARGIN = 2,FUN = function(x) {rank(-x) } )
 score_Si = rowMeans(score_Si, na.rm = TRUE)
 score_Si_ordered = score_Si[order(as.numeric(score_Si))]
-signature_silice = names(score_Si_ordered[1:50])
+signature_Si = names(score_Si_ordered[1:50])
 }
 
 #Normalization scores
@@ -167,45 +176,65 @@ signature_silice = names(score_Si_ordered[1:50])
   all_scores_norm=normalize.quantiles(all_scores)
   rownames(all_scores_norm)=rownames(all_scores)
   colnames(all_scores_norm)=colnames(all_scores)
+  
+  #all_score
 }
-
 
 #Weighted correlation between scores
 
 {
   
 correlation_matrix=matrix(NA, nrow=15, ncol=15)
-pvalue_matrix=matrix(NA, nrow=15, ncol=15)
+pvalue_Fisher_matrix=matrix(NA, nrow=15, ncol=15)
+pvalue_bootstrap_matrix=matrix(NA, nrow=15, ncol=15)
+
     
 for (i in 1:15){
-  for (j in 1:15){
+  for (j in i:15){
     correlation_matrix[i,j]=weightedCorr(all_scores_norm[,i],all_scores_norm[,j], 
                                            weights = 1/((all_scores_norm[,i]^2)*(all_scores_norm[,j]^2)), method="Pearson")
   }
 }
 
 for (i in 1:15){
-  for (j in 1:15){
-    pvalue_matrix[i,j]=as.numeric(summary(lm(all_scores_norm[,i]~all_scores_norm[,j], 
+  for (j in i:15){
+    pvalue_Fisher_matrix[i,j]=as.numeric(summary(lm(all_scores_norm[,i]~all_scores_norm[,j], 
                                              weight=1/(all_scores_norm[,i]^2*all_scores_norm[,j]^2)))[[5]][,4][2])
   }
 }
-    
-correlation_matrix=as.data.frame(correlation_matrix)
-pvalue_matrix=as.data.frame(pvalue_matrix)
+
+for (i in 1:15){
+  for (j in i:15){
+    correlation_values_shuffle=c()
+    for (k in 1:300){
+      first_vector_shuffled=all_scores_norm[,i][sample(1:length(all_scores_norm[,i]),length(all_scores_norm[,i]),replace=F)]
+      second_vector_shuffled=all_scores_norm[,j][sample(1:length(all_scores_norm[,j]),length(all_scores_norm[,j]),replace=F)]
+      
+      correlation_values_shuffle=rbind(correlation_values_shuffle, weightedCorr(first_vector_shuffled,
+                                                                                second_vector_shuffled, 
+                                                                            weights = 1/((first_vector_shuffled^2)*(second_vector_shuffled^2)), 
+                                                                            method="Pearson"))
+    }
+    pvalue_bootstrap_matrix[i,j]=1-ecdf(correlation_values_shuffle)(as.numeric(correlation_matrix[i,j]))
+  }
+}
+
     
 colnames(correlation_matrix)=c("Platinum (ion)","Titanium (NP)", "Cadmium (ion)","Gold (NP)", "Gold (ion)",
                                  "Silver (NP)", "Silver (ion)","Copper (NP)", "Copper (ion)","Iron (NP)", 
                                  "Iron (ion)","Zinc (NP)", "Zinc (ion)", "Carbon (NP)", "Silicon (NP)")
 rownames(correlation_matrix)=colnames(correlation_matrix)
-colnames(pvalue_matrix)=colnames(correlation_matrix)
-rownames(correlation_matrix)=colnames(correlation_matrix)
+colnames(pvalue_Fisher_matrix)=colnames(correlation_matrix)
+rownames(pvalue_Fisher_matrix)=colnames(correlation_matrix)
+colnames(pvalue_bootstrap_matrix)=colnames(correlation_matrix)
+rownames(pvalue_bootstrap_matrix)=colnames(correlation_matrix)
     
-pheatmap(correlation_matrix, clustering_method = "ward.D", display_numbers=T)
+pheatmap(correlation_matrix, display_numbers=T, cluster_rows = F, cluster_cols = F)
 
-  
+pheatmap(pvalue_Fisher_matrix, display_numbers=T, cluster_rows = F, cluster_cols = F)
+
+pheatmap(pvalue_bootstrap_matrix, display_numbers=T, cluster_rows = F, cluster_cols = F)
 }
-
 
 #Response to Zn, Au, Ag, Cu and Cd
 
@@ -235,27 +264,27 @@ Score_ZnAgAuCuCd_ordered=Score_ZnAgAuCuCd[order(Score_ZnAgAuCuCd)]
   
   #Initialisation
   
-  initial_genes=c(1:6)
+  initial_genes_ZnAgAuCuCd=c(1:6)
   
-  ideal_clust=ifelse(Dataset_info[,5]=="cadmium"|Dataset_info[,5]=="zinc"|Dataset_info[,5]=="copper"|Dataset_info[,5]=="gold"|Dataset_info[,5]=="silver",2,1)
-  hierarc_clust_init=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[initial_genes]),])), method="ward.D2"),k=2)
-  F1_score_init=F1_Score(ideal_clust, hierarc_clust_init, positive="2")
+  ideal_clust_ZnAgAuCuCd=ifelse(Dataset_info[,5]=="cadmium"|Dataset_info[,5]=="zinc"|Dataset_info[,5]=="copper"|Dataset_info[,5]=="gold"|Dataset_info[,5]=="silver",2,1)
+  hierarc_clust_init_ZnAgAuCuCd=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[initial_genes_ZnAgAuCuCd]),])), method="ward.D2"),k=2)
+  F1_score_init_ZnAgAuCuCd=F1_Score(ideal_clust_ZnAgAuCuCd, hierarc_clust_init_ZnAgAuCuCd, positive="2")
   
   
   #Step forward
   
-  F1_max=F1_score_init
-  selected_genes_ZnAuAgCuCd=initial_genes
+  F1_max_ZnAgAuCuCd=F1_score_init_ZnAgAuCuCd
+  selected_genes_ZnAuAgCuCd=initial_genes_ZnAgAuCuCd
   
   for (i in 7:50)
     
   {
-    hierarc_clust_boucle=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[c(selected_genes_ZnAuAgCuCd,i)]),])), method="ward.D2"),k=2)
-    F1_score_boucle=F1_Score(ideal_clust, hierarc_clust_boucle, positive="2")
-    if (is.na(F1_score_boucle)) {F1_score_boucle=0}
+    hierarc_clust_boucle_ZnAgAuCuCd=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[c(selected_genes_ZnAuAgCuCd,i)]),])), method="ward.D2"),k=2)
+    F1_score_boucle_ZnAgAuCuCd=F1_Score(ideal_clust_ZnAgAuCuCd, hierarc_clust_boucle_ZnAgAuCuCd, positive="2")
+    if (is.na(F1_score_boucle_ZnAgAuCuCd)) {F1_score_boucle_ZnAgAuCuCd=0}
     
-    if (F1_score_boucle>F1_max) {selected_genes_ZnAuAgCuCd=c(selected_genes_ZnAuAgCuCd,i)
-    F1_max=F1_score_boucle}
+    if (F1_score_boucle_ZnAgAuCuCd>F1_max_ZnAgAuCuCd) {selected_genes_ZnAuAgCuCd=c(selected_genes_ZnAuAgCuCd,i)
+    F1_max_ZnAgAuCuCd=F1_score_boucle_ZnAgAuCuCd}
     
   }
   
@@ -266,17 +295,26 @@ Score_ZnAgAuCuCd_ordered=Score_ZnAgAuCuCd[order(Score_ZnAgAuCuCd)]
   
   for (j in 1:length(selected_genes_ZnAuAgCuCd)){
     
-    hierarc_clust_boucle_2=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[selected_genes_ZnAuAgCuCd[-j]]),])), method="ward.D2"),k=2)
-    F1_score_boucle_2=F1_Score(ideal_clust, hierarc_clust_boucle_2, positive="2")
-    if (is.na(F1_score_boucle_2)) {F1_score_boucle_2=0}
+    hierarc_clust_boucle_2_ZnAgAuCuCd=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[selected_genes_ZnAuAgCuCd[-j]]),])), method="ward.D2"),k=2)
+    F1_score_boucle_2_ZnAgAuCuCd=F1_Score(ideal_clust_ZnAgAuCuCd, hierarc_clust_boucle_2_ZnAgAuCuCd, positive="2")
+    if (is.na(F1_score_boucle_2_ZnAgAuCuCd)) {F1_score_boucle_2_ZnAgAuCuCd=0}
     
-    if (F1_score_boucle_2<=F1_max) {final_genes_ZnAgAuCuCd=c(final_genes_ZnAgAuCuCd, selected_genes_ZnAuAgCuCd[j])} }
+    if (F1_score_boucle_2_ZnAgAuCuCd<=F1_max_ZnAgAuCuCd) {final_genes_ZnAgAuCuCd=c(final_genes_ZnAgAuCuCd, selected_genes_ZnAuAgCuCd[j])} }
   
+  }
 
-  F1_max
-  names(Score_ZnAgAuCuCd_ordered[c(final_genes_ZnAgAuCuCd)])
-  
-  
+  ##p value calculation
+
+  {
+    list_F1_score_random_ZnAgAuCuCd=c()
+    
+    for (i in 1:500){
+      hierarc_clust_random_ZnAgAuCuCd=cutree(hclust(dist(t(all_data_select_norm[names(Score_ZnAgAuCuCd_ordered[sample(x = 1:50, size = length(final_genes_ZnAgAuCuCd))]),])), method="ward.D2"),k=2)
+      F1_score_random_ZnAgAuCuCd=F1_Score(ideal_clust_ZnAgAuCuCd, hierarc_clust_random_ZnAgAuCuCd, positive="2")
+      list_F1_score_random_ZnAgAuCuCd=rbind(list_F1_score_random_ZnAgAuCuCd,F1_score_random_ZnAgAuCuCd)
+    }
+    
+    pvalue_F1score_ZnAgAuCuCd=1-ecdf(list_F1_score_random_ZnAgAuCuCd)(as.numeric(F1_max_ZnAgAuCuCd))
   
   }
 
@@ -289,7 +327,6 @@ colnames(annotation_heatmap)=c("Metal","Form")
 pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "ward.D2",show_colnames=F ,
          cutree_cols = 2, annotation_col = annotation_heatmap)
 }
-
 
 #Response to NPs
 
@@ -313,50 +350,62 @@ pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "
     
     #Initialisation
     
-    initial_genes=c(1:6)
+    initial_genes_NP=c(1:6)
     
-    ideal_clust=ifelse(Dataset_info[,6]=="np",2,1)
-    hierarc_clust_init=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[initial_genes]),])), method="ward.D2"),k=2)
-    F1_score_init=F1_Score(ideal_clust, hierarc_clust_init, positive="2")
+    ideal_clust_NP=ifelse(Dataset_info[,6]=="np",2,1)
+    hierarc_clust_init_NP=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[initial_genes_NP]),])), method="ward.D2"),k=2)
+    F1_score_init_NP=F1_Score(ideal_clust_NP, hierarc_clust_init_NP, positive="2")
 
     
     #Step forward
     
-    F1_max=F1_score_init
-    selected_genes_NP=initial_genes
+    F1_max_NP=F1_score_init_NP
+    selected_genes_NP=initial_genes_NP
     
     for (l in 7:50)
       
     {
-      hierarc_clust_boucle=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[c(selected_genes_NP,l)]),])), method="ward.D2"),k=2)
-      F1_score_boucle=F1_Score(ideal_clust, hierarc_clust_boucle, positive="2")
-      if (is.na(F1_score_boucle)) {F1_score_boucle=0}
+      hierarc_clust_boucle_NP=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[c(selected_genes_NP,l)]),])), method="ward.D2"),k=2)
+      F1_score_boucle_NP=F1_Score(ideal_clust_NP, hierarc_clust_boucle_NP, positive="2")
+      if (is.na(F1_score_boucle_NP)) {F1_score_boucle_NP=0}
       
-      if (F1_score_boucle>F1_max) {selected_genes_NP=c(selected_genes_NP,l)
-      F1_max=F1_score_boucle}
+      if (F1_score_boucle_NP>F1_max_NP) {selected_genes_NP=c(selected_genes_NP,l)
+      F1_max_NP=F1_score_boucle_NP}
       
     }
     
     
     #Step backward
     
-    final_genes_NPs=c()
+    final_genes_NP=c()
     
     for (j in 1:length(selected_genes_NP)){
       
-      hierarc_clust_boucle_2=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[selected_genes_NP[-j]]),])), method="ward.D2"),k=2)
-      F1_score_boucle_2=F1_Score(ideal_clust, hierarc_clust_boucle_2, positive="2")
-      if (is.na(F1_score_boucle_2)) {F1_score_boucle_2=0}
+      hierarc_clust_boucle_2_NP=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[selected_genes_NP[-j]]),])), method="ward.D2"),k=2)
+      F1_score_boucle_2_NP=F1_Score(ideal_clust_NP, hierarc_clust_boucle_2_NP, positive="2")
+      if (is.na(F1_score_boucle_2_NP)) {F1_score_boucle_2_NP=0}
       
-      if (F1_score_boucle_2<=F1_max) {final_genes_NPs=c(final_genes_NPs, selected_genes_NP[j])} }
+      if (F1_score_boucle_2_NP<=F1_max_NP) {final_genes_NP=c(final_genes_NP, selected_genes_NP[j])} }
     
-
-    F1_max
-    names(score_NP_persist_ordered[c(final_genes_NPs)])
     
   }
   
-  data_heatmap_NP=all_data_select_norm[names(score_NP_persist_ordered[c(final_genes_NPs)]),as.character(Dataset_info[,1])]
+  ##p value calculation
+  
+  {
+    list_F1_score_random_NP=c()
+    
+    for (i in 1:500){
+      hierarc_clust_random_NP=cutree(hclust(dist(t(all_data_select_norm[names(score_NP_persist_ordered[sample(x = 1:50, size = length(final_genes_NP))]),])), method="ward.D2"),k=2)
+      F1_score_random_NP=F1_Score(ideal_clust_NP, hierarc_clust_random_NP, positive="2")
+      list_F1_score_random_NP=rbind(list_F1_score_random_NP,F1_score_random_NP)
+    }
+    
+    pvalue_F1score_NP=1-ecdf(list_F1_score_random_NP)(as.numeric(F1_max_NP))
+    
+  }
+  
+  data_heatmap_NP=all_data_select_norm[names(score_NP_persist_ordered[c(final_genes_NP)]),as.character(Dataset_info[,1])]
   
   pheatmap(data_heatmap_NP, cluster_rows = F, cluster_cols = T, clustering_method = "ward.D2", border_color="grey50",show_colnames=F ,
            cutree_cols = 2, annotation_col = annotation_heatmap)
@@ -375,32 +424,31 @@ pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "
     
     ##Gene selection
     
-    
     {
       
       #Initialisation
       
-      initial_genes=c(1:6)
+      initial_genes_essential=c(1:6)
       
-      ideal_clust=ifelse(Dataset_info[Dataset_info$metal=="yes",3]=="essential",2,1)
-      hierarc_clust_init=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[initial_genes]),])), method="ward.D2"),k=2)
-      F1_score_init=F1_Score(ideal_clust, hierarc_clust_init, positive="2")
+      ideal_clust_essential=ifelse(Dataset_info[Dataset_info$metal=="yes",3]=="essential",2,1)
+      hierarc_clust_init_essential=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[initial_genes_essential]),])), method="ward.D2"),k=2)
+      F1_score_init_essential=F1_Score(ideal_clust_essential, hierarc_clust_init_essential, positive="2")
       
       
       #Step forward
       
-      F1_max=F1_score_init
-      selected_genes_essential=initial_genes
+      F1_max_essential=F1_score_init_essential
+      selected_genes_essential=initial_genes_essential
       
       for (l in 7:50)
         
       {
-        hierarc_clust_boucle=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[c(selected_genes_essential,l)]),])), method="ward.D2"),k=2)
-        F1_score_boucle=F1_Score(ideal_clust, hierarc_clust_boucle, positive="2")
-        if (is.na(F1_score_boucle)) {F1_score_boucle=0}
+        hierarc_clust_boucle_essential=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[c(selected_genes_essential,l)]),])), method="ward.D2"),k=2)
+        F1_score_boucle_essential=F1_Score(ideal_clust_essential, hierarc_clust_boucle_essential, positive="2")
+        if (is.na(F1_score_boucle_essential)) {F1_score_boucle_essential=0}
         
-        if (F1_score_boucle>F1_max) {selected_genes_essential=c(selected_genes_essential,l)
-        F1_max=F1_score_boucle}
+        if (F1_score_boucle_essential>F1_max_essential) {selected_genes_essential=c(selected_genes_essential,l)
+        F1_max_essential=F1_score_boucle_essential}
         
       }
       
@@ -411,18 +459,28 @@ pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "
       
       for (j in 1:length(selected_genes_essential)){
         
-        hierarc_clust_boucle_2=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[selected_genes_essential[-j]]),])), method="ward.D2"),k=2)
-        F1_score_boucle_2=F1_Score(ideal_clust, hierarc_clust_boucle_2, positive="2")
-        if (is.na(F1_score_boucle_2)) {F1_score_boucle_2=0}
+        hierarc_clust_boucle_2_essential=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[selected_genes_essential[-j]]),])), method="ward.D2"),k=2)
+        F1_score_boucle_2_essential=F1_Score(ideal_clust_essential, hierarc_clust_boucle_2_essential, positive="2")
+        if (is.na(F1_score_boucle_2_essential)) {F1_score_boucle_2_essential=0}
         
-        if (F1_score_boucle_2<=F1_max) {final_genes_essential=c(final_genes_essential, selected_genes_essential[j])} }
-      
-      
-      F1_max
-      names(score_essential_ordered[c(final_genes_essential)])
+        if (F1_score_boucle_2_essential<=F1_max_essential) {final_genes_essential=c(final_genes_essential, selected_genes_essential[j])} }
       
     }
     
+    ##p value calculation
+    
+    {
+      list_F1_score_random_essential=c()
+      
+      for (i in 1:500){
+        hierarc_clust_random_essential=cutree(hclust(dist(t(data_select_norm_metals[names(score_essential_ordered[sample(x = 1:50, size = length(final_genes_essential))]),])), method="ward.D2"),k=2)
+        F1_score_random_essential=F1_Score(ideal_clust_essential, hierarc_clust_random_essential, positive="2")
+        list_F1_score_random_essential=rbind(list_F1_score_random_essential,F1_score_random_essential)
+      }
+      
+      pvalue_F1score_essential=1-ecdf(list_F1_score_random_essential)(as.numeric(F1_max_essential))
+      
+    }
     
     data_heatmap_essentiel=data_select_norm_metals[names(score_essential_ordered[c(final_genes_essential)]),]
     
@@ -441,32 +499,31 @@ pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "
     
     ##Gene selection
     
-    
     {
       
       #Initialisation
       
-      initial_genes=c(1:6)
+      initial_genes_toxic=c(1:6)
       
-      ideal_clust=ifelse(Dataset_info[Dataset_info$metal=="yes",4]=="toxic",2,1)
-      hierarc_clust_init=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[initial_genes]),])), method="ward.D2"),k=2)
-      F1_score_init=F1_Score(ideal_clust, hierarc_clust_init, positive="2")
+      ideal_clust_toxic=ifelse(Dataset_info[Dataset_info$metal=="yes",4]=="toxic",2,1)
+      hierarc_clust_init_toxic=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[initial_genes_toxic]),])), method="ward.D2"),k=2)
+      F1_score_init_toxic=F1_Score(ideal_clust_toxic, hierarc_clust_init_toxic, positive="2")
       
       
       #Step forward
       
-      F1_max=F1_score_init
-      selected_genes_toxicity=initial_genes
+      F1_max_toxic=F1_score_init_toxic
+      selected_genes_toxicity=initial_genes_toxic
       
       for (l in 7:50)
         
       {
-        hierarc_clust_boucle=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[c(selected_genes_toxicity,l)]),])), method="ward.D2"),k=2)
-        F1_score_boucle=F1_Score(ideal_clust, hierarc_clust_boucle, positive="2")
-        if (is.na(F1_score_boucle)) {F1_score_boucle=0}
+        hierarc_clust_boucle_toxic=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[c(selected_genes_toxicity,l)]),])), method="ward.D2"),k=2)
+        F1_score_boucle_toxic=F1_Score(ideal_clust_toxic, hierarc_clust_boucle_toxic, positive="2")
+        if (is.na(F1_score_boucle_toxic)) {F1_score_boucle_toxic=0}
         
-        if (F1_score_boucle>F1_max) {selected_genes_toxicity=c(selected_genes_toxicity,l)
-        F1_max=F1_score_boucle}
+        if (F1_score_boucle_toxic>F1_max_toxic) {selected_genes_toxicity=c(selected_genes_toxicity,l)
+        F1_max_toxic=F1_score_boucle_toxic}
         
       }
       
@@ -477,18 +534,28 @@ pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "
       
       for (j in 1:length(selected_genes_toxicity)){
         
-        hierarc_clust_boucle_2=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[selected_genes_toxicity[-j]]),])), method="ward.D2"),k=2)
-        F1_score_boucle_2=F1_Score(ideal_clust, hierarc_clust_boucle_2, positive="2")
-        if (is.na(F1_score_boucle_2)) {F1_score_boucle_2=0}
+        hierarc_clust_boucle_2_toxic=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[selected_genes_toxicity[-j]]),])), method="ward.D2"),k=2)
+        F1_score_boucle_2_toxic=F1_Score(ideal_clust_toxic, hierarc_clust_boucle_2_toxic, positive="2")
+        if (is.na(F1_score_boucle_2_toxic)) {F1_score_boucle_2_toxic=0}
         
-        if (F1_score_boucle_2<=F1_max) {final_genes_toxicity=c(final_genes_toxicity, selected_genes_toxicity[j])} }
-      
-      
-      F1_max
-      names(score_toxic_ordered[c(final_genes_toxicity)])
+        if (F1_score_boucle_2_toxic<=F1_max_toxic) {final_genes_toxicity=c(final_genes_toxicity, selected_genes_toxicity[j])} }
       
     }
     
+    ##p value calculation
+    
+    {
+      list_F1_score_random_toxic=c()
+      
+      for (i in 1:500){
+        hierarc_clust_random_toxic=cutree(hclust(dist(t(data_select_norm_metals[names(score_toxic_ordered[sample(x = 1:50, size = length(final_genes_toxicity))]),])), method="ward.D2"),k=2)
+        F1_score_random_toxic=F1_Score(ideal_clust_toxic, hierarc_clust_random_toxic, positive="2")
+        list_F1_score_random_toxic=rbind(list_F1_score_random_toxic,F1_score_random_toxic)
+      }
+      
+      pvalue_F1score_toxic=1-ecdf(list_F1_score_random_toxic)(as.numeric(F1_max_toxic))
+      
+    }
     
     data_heatmap_toxicity=data_select_norm_metals[names(score_toxic_ordered[c(final_genes_toxicity)]),]
     
@@ -496,5 +563,91 @@ pheatmap(data_heatmap, cluster_rows = F, cluster_cols = T, clustering_method = "
              cutree_cols = 2, annotation_col = annotation_heatmap)
     
     
+}
+
+#Biological function enrichment
+
+{
+  GO_database = GSA.read.gmt("c5.bp.v5.2.symbols.gmt.txt")
+  GO_gene_sets = GO_database$genesets
+  names(GO_gene_sets) =GO_database$geneset.names
+  
+  
+  Total_gene_names = rownames(all_data_select_norm)
+  Table_top50_genes = cbind(signature_Ag_ion,signature_Ag_np, signature_Au_ion,signature_Au_np,
+                      signature_C,signature_Cd,signature_Cu_ion,signature_Cu_np,
+                      signature_Fe_ion,signature_Fe_np,signature_Pt,signature_Si,
+                      signature_Ti,signature_Zn_ion,signature_Zn_np)
+  
+  #Table_top50_genes is Data_File_S2
+  
+  N_sampled_genes = nrow(Table_top50_genes)
+  Table_p_value_enrichment = c()
+  
+  for (i in 1:ncol(Table_top50_genes)) {
+    Vector_p_value = c()
+    for (k in 1:length(GO_gene_sets)) {
+      Gene_set = GO_gene_sets[[k]]
+      Gene_set_intersect = intersect(intersect(Gene_set,Total_gene_names),Table_top50_genes[,i])
+      
+      p_value = phyper(q = length(Gene_set_intersect),m =  length(Gene_set),n = length(Total_gene_names)-length(Gene_set),
+                       lower.tail = F,k = N_sampled_genes)
+      Vector_p_value = c(Vector_p_value,p_value)
+    }
+    Table_p_value_enrichment = cbind(Table_p_value_enrichment,Vector_p_value)
   }
+  
+  rownames(Table_p_value_enrichment) = names(GO_gene_sets)
+  colnames(Table_p_value_enrichment) = colnames(Table_top50_genes)
+  
+  Table_p_value_enrichment = apply(Table_p_value_enrichment,MARGIN = 2,FUN = function(x) {p.adjust(x,method = "fdr")})
+
+  
+  
+  
+  index=1 #change index to select the condition of interest in colnames(Table_top50_genes)
+  enriched_bio_function=as.matrix(Table_p_value_enrichment[Table_p_value_enrichment[,index]<0.01,index])
+  selected_GO_gene_sets=c()
+  
+  for (j in 1:nrow(enriched_bio_function)){
+    
+    selected_GO_gene_sets[j]=table(unlist(Table_top50_genes[,index])%in%unlist(GO_gene_sets[rownames(enriched_bio_function)[j]]))["TRUE"]>3}
+  
+  enriched_bio_function=enriched_bio_function[rownames(enriched_bio_function)[selected_GO_gene_sets],]
+  enriched_bio_function=as.data.frame(enriched_bio_function)
+  
+  for (j in 1:nrow(enriched_bio_function)){
+    enriched_bio_function[j,2]=toString(Table_top50_genes[unlist(Table_top50_genes[,index])%in%unlist(GO_gene_sets[rownames(enriched_bio_function)[j]]),index])
+  }
+  
+  #enriched_bio_function is Data_File_Sx, with x in (3:14)
+  #stop here for index = 4 (Au NPs), 10 (Fe NPs) and 13 (Ti NPs) : no enriched biological function
+  #stop here for index = 9 (Fe ions) : only one enriched biological function
+  
+  genes_in_enriched_bio_function_list=list()
+  for (j in 1:nrow(enriched_bio_function)){
+    genes_in_enriched_bio_function_list[j]=list(Table_top50_genes[unlist(Table_top50_genes[,index])%in%unlist(GO_gene_sets[rownames(enriched_bio_function)[j]]),index])
+  }
+  genes_in_enriched_bio_function_all=unique(unlist(genes_in_enriched_bio_function_list))
+  
+  enrichment_matrix=matrix(0,ncol = length(genes_in_enriched_bio_function_all), nrow=length(genes_in_enriched_bio_function_all))
+  rownames(enrichment_matrix)=genes_in_enriched_bio_function_all
+  colnames(enrichment_matrix)=genes_in_enriched_bio_function_all
+  for (i in 1:length(genes_in_enriched_bio_function_all)){
+    for (j in 1:length(genes_in_enriched_bio_function_all)){
+      a=0
+      for (k in 1:length(genes_in_enriched_bio_function_list)){
+        if (genes_in_enriched_bio_function_all[i]%in%unlist(genes_in_enriched_bio_function_list[k])&genes_in_enriched_bio_function_all[j]%in%unlist(genes_in_enriched_bio_function_list[k]))
+          a=a+1}
+      enrichment_matrix[i,j]=a
+    }
+  }
+  
+  pheatmap(enrichment_matrix, clustering_method = "ward.D2")
+  
+  graph_enrichment_matrix=graph_from_adjacency_matrix(enrichment_matrix,weighted = T, mode=c("undirected"), diag=F)
+  plot(graph_enrichment_matrix)
+  
+}
+
   
